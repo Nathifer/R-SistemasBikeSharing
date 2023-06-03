@@ -1,0 +1,971 @@
+---
+title: "Sistemas Bike Sharing - Analisis Estadistico"
+author: "Nathalia Fernandez"
+date: "16/12/2021"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Sistemas Bike Sharing
+
+El conjunto de datos bikes.csv  contiene informacion sobre el alquiler y devolucion automatizado de bicicletas en dferentes ciudades. Se debe  predecir el nivel diario de alquiler de bicicletas a partir de variables ambientales y estacionales.
+
+
+******
+# Carga de datos
+******
+
+Lectura del fichero de datos **"bikes.csv"** se guardan los datos en un objeto con identificador denominado **bikes**
+
+```{r}
+setwd("C:/Users/natha/OneDrive/Desktop/MASTER - DS/2. TECNICAS DE ANALISIS ESTADISTICO/Data")
+bikes<- read.csv("bikes.csv", header=TRUE, sep=",", dec=".", fileEncoding = "UTF-8")
+```
+
+```{r, include=FALSE}
+# Librerías
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(GGally)
+library(stringr)
+library(moments) 
+library(broom)
+```
+
+
+## *Descripción de la estructura los datos*
+
+Se muestra una descripción de la estructura de datos para conocer número de filas, número de columnas, nombre de las columnas y tipo de datos:
+
+```{r}
+str(bikes)
+```
+
+Se muestra un resumen para conocer minimo, maximo, quantiles media y mediana de los datos.
+
+```{r}
+summary(bikes)
+```
+
+Se comprueba la existencia de valores NA's en el DataFrame. 
+
+```{r}
+bikes %>%
+  summarise_all(.funs = ~ sum(is.na(.)))
+```
+**RESPUESTA**: No hay valores con NA's. 
+
+******
+# Variables numéricas
+******
+
+**Analisis de las variables numéricas univariantemente**
+
+De cada una de las variables se responden al final las siguientes preguntas: 
+
+ + ¿Se distribuyen simétricamente?
+
+ + ¿Existe algún outlier?
+
+ + ¿Puedes dar un buen estimador de localización de las variables? Para cada una, si puedes, calcúlalo, si no argumenta por que. 
+
+ + ¿Está la variable windspeed distribuida normalmente? Argumenta por que sí o no y utiliza alguno de los métodos estudiados.
+
+## *Variable CNT*
+
+```{r}
+alquiler <-bikes %>%
+  summarise(
+    media = mean(cnt),
+    mediana = median(cnt),
+    media_winsorizada = mean(cnt, trim = 0.1),
+    desviacion_tipica = sd(cnt),
+    varianza = var(cnt),
+    IQR = IQR(cnt),
+    maximo = max(cnt),
+    minimo = min(cnt),
+    Q1=quantile(cnt,0.25),
+    Q3=quantile(cnt,0.75))
+
+print(alquiler)
+```
+
+**Estimador de localización de la variable cnt** 
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  cnt), bins = 50) +
+  theme_light() +
+  geom_vline(
+    data = alquiler %>%
+      select(media, mediana, media_winsorizada, maximo, minimo, Q1, Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+```
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = cnt), adjust = .5, width = .3, .width = 0, justification = -.3, slab_color = "darkturquoise") +
+  geom_boxplot(aes(y = cnt),width = .1, color = "darkturquoise") +
+  gghalves::geom_half_point(aes(y = cnt), side = "l", range_scale = .4, alpha = .5, color = "darkturquoise") +
+  theme_light()
+```
+
++  Siendo la media  4504.349 menor que la mediana 4548, podemos decir que la distribucion es  ligeramente asimetrica negativa, sin embargo en el histograma es poco perceptible, por lo que La distribución normal parece ser una buena aproximación.
+
++  Al menos el 50% de los datos se encuentra en la franja entre Q1(3152) y Q3 (4548).
+
++  No se observan outliers.
+
++  En el grafico de dispersion no se observan subgrupos o tenmdencias de manera clara.
+
++  Su desviacion tipica es de 1937.211, por lo que podemos decir que los datos pueden variar 1937.211 con respecto al valor de la media. 
+
+
+## *Variable Humedad*
+
+```{r, echo=FALSE}
+humedad <-bikes %>%
+  summarise(
+    media = mean(hum),
+    mediana = median(hum),
+    media_winsorizada = mean(hum, trim = 0.1),
+    desviacion_tipica = sd(hum),
+    varianza = var(hum),
+    IQR = IQR(hum),
+    maximo = max(hum),
+    minimo = min(hum),
+    Q1=quantile(hum,0.25),
+    Q3=quantile(hum,0.75))
+
+print(humedad)
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  hum), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = humedad %>%
+      select(media, mediana, media_winsorizada, maximo, minimo, Q1, Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+```
+
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = hum), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour = "purple") +
+  geom_boxplot(aes(y = hum),width = .1, color = "purple") +
+  gghalves::geom_half_point(aes(y = hum), side = "l", range_scale = .4, alpha = .5, color = "purple") +
+  theme_light()
+```
+
+**Deteccion de los outliers del grafico**
+
+```{r, echo=FALSE}
+boxplot.stats(bikes$hum)
+```
+
+**Analisis de los graficos** 
+
++ Siendo la media 0.6278941 mayor que la mediana 0.626667, podemos decir que la distribucion es  asimetrica positiva. 
+
++ En este grafico podemos observar como la varible tiene dos valores outliers  y una cola ubicada hacia la izquierda, por lo tanto no se corresponde a una distirbucion normal.
+
++ Se muestran un valor raro donde la humedad era de 0.00000 (Valor minimo) y otro considerado raro por ser muy baja (0.18) ya que normalmente se concentra entre 0.40 y 0.75.
+
+
++ Siendo su desviacion tipica de 0.1424291, podemos decir que en media la humedad puede variar un 0.14 del valor.Ademas, observamos en su grafico de dispersion los datos estan bastante concentrados en comparacion al resto de variables.
+
++ El tamaño de la caja del boxplot se determina por el rango intercuatilico (IQR) el cual se extiende desde el percentil 25 hasta el percentil 75, es decir, en nuestro grafico vemos que para la variable humedad los valores estan entre 0.5200000 y  0.7302085.
+
++ El rango IQR es de  0.2102085, que seria la altura de la caja entre Q1 y Q3, lo cual nos indica que el 50% de los datos estan concentrados en torno a los valores 0.52 y 0.7302085.
+
+
+
+## *Variable Temperatura*
+
+```{r, echo=FALSE}
+temperatura <-bikes %>%
+  summarise(
+    media = mean(temp),
+    mediana = median(temp),
+    media_winsorizada = mean(temp, trim = 0.1),
+    desviacion_tipica = sd(temp),
+    varianza = var(temp),
+    IQR = IQR(temp),
+    maximo = max(temp),
+    minimo = min(temp),
+    Q1=quantile(temp,0.25),
+    Q3=quantile(temp,0.75))
+
+print(temperatura)
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  temp), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = temperatura %>%
+      select(media, mediana, media_winsorizada, maximo, minimo, Q1, Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram( aes(x =  temp),binwidth = 0.05, fill = "deeppink")
+```
+
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = temp), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour = "deeppink") +
+  geom_boxplot(aes(y = temp),width = .1, color = "deeppink") +
+  gghalves::geom_half_point(aes(y = temp), side = "l", range_scale = 0.4, alpha = 0.5, bins = 10, color = "deeppink") +
+  theme_light()
+```
+
+
++ En esta imagen podemos apreciar una distribucion asimetrica negativa, donde su media es 0.4953848, menor a su mediana que es	0.498333.
+
++ Prodia apreciarse que existen posiblemente datos multimodales, con mas de un pico  donde uno de ellos  esta por encima de la media y otro por debajo de la media, donde hay temperaturas inferiores a 0.50 o superiores a 0.50.
+
++ La temperatura tiene una desviacion tipica de 0.183051 de variacion con respecto al valor de la media de la temperatura 0.4953848.
+
++ Podemos decir que el IQR, donde estan el 50% de los datos , se encuentra en la franja ente 0.3370835 y 	0.6554165.
+
++ No se muestran outliers en el gráfico.
+
+
+## *Variable Sensacion termica (atemp)*
+
+```{r, echo=FALSE}
+atemperatura <-bikes %>%
+  summarise(
+    media = mean(atemp),
+    mediana = median(atemp),
+    media_winsorizada = mean(atemp, trim = 0.1),
+    desviacion_tipica = sd(atemp),
+    varianza = var(atemp),
+    IQR = IQR(atemp),
+    maximo = max(atemp),
+    minimo = min(atemp),
+    Q1=quantile(atemp,0.25),
+    Q3=quantile(atemp,0.75))
+
+print(atemperatura)
+```
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  atemp), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = atemperatura %>%
+      select(media, mediana, media_winsorizada, maximo, minimo, Q1, Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram( aes(x =  atemp),binwidth = 0.04, fill = "darkgreen")
+```
+
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = atemp), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour ="darkgreen") +
+  geom_boxplot(aes(y = atemp),width = .1,color = "green") +
+  gghalves::geom_half_point(aes(y = atemp), side = "l", range_scale = 0.4, alpha = 0.5, bins = 10, color = "darkgreen") +
+  theme_light()
+```
+
++ Prodia apreciarse que existen posiblemente datos multimodales, con mas de un pico, en donde la variable temperatura esta por encima de la media o por debajo, y donde hay sensaciones termicas bajas inferiores a 0.47 y altas superiores a 0.47 aproximadamente.
+
++ En esta imagen podemos apreciar una distribución asimetrica negativa, donde su media es 0.474354, menor a su mediana que es 0.486733.
+
++ La atemp tiene una desviacion tipica de 0.1629612 de variacion con respecto al valor de la media 0.474354.
+
++ Podemos decir que el IQR, donde estan el 50% de los datos , se encuentra en la franja ente 0.3378425 y	0.608602.
+
++ No se muestran outliers en el gráfico.
+
+
+## *Variable Velocidad del viento*
+
+```{r, echo=FALSE}
+viento <-bikes %>%
+  summarise(
+    media = mean(windspeed),
+    mediana = median(windspeed),
+    media_winsorizada = mean(windspeed, trim = 0.1),
+    desviacion_tipica = sd(windspeed),
+    varianza = var(windspeed),
+    IQR = IQR(windspeed),
+    maximo = max(windspeed),
+    minimo = min(windspeed),
+    Q1=quantile(windspeed,0.25),
+    Q3=quantile(windspeed,0.75))
+
+print(viento)
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  windspeed), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = viento %>%
+      select(media, mediana, media_winsorizada, maximo, minimo,Q1,Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+
+```
+
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = windspeed), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour = "red") +
+  geom_boxplot(aes(y = windspeed),width = .1, color = "red") +
+  gghalves::geom_half_point(aes(y = windspeed), side = "l", range_scale = 0.4, alpha = 0.5, bins = 10, color = "red") +
+  theme_light()
+```
+
+**Deteccion de los outliers del grafico**
+
+```{r, echo=FALSE}
+boxplot.stats(bikes$windspeed)
+```
+
++  La varaible windspeed no se distribuye normalmente porque los datos estan concentrados hacia el lado derecho de la grafica. 
+
++  Siendo la media 0.1904862 mayor que la mediana 0.180975, podemos decir que la distribucion es asimetrica positiva.
+
++  Podemos observar como la varible tiene valores outliers entre 0.385571 y 0.507463 lo que se observa como una cola ubicada hacia la derecha, por lo tanto no se corresponde a una distirbucion normal.
+
++  En el boxplot se determina por el rango intercuatilico (IQR)  que donde se concentra el 50% de los datos, es en la franja  entre 0.13495 y 	0.2332145.
+
++  Siendo la desviacion tipica 0.07749787, esto quiere decir que datos varian en 0.07749787 del valor de la media. 
+
+
+**Contraste de hipotesis**
+
++ **Hipotesis nula:** Hay distribución normal en los datos
++ **Hipotesis alternativa:** No hay distribución normal en los datos 
+
+**Nivel de significancia:**  alpha = 0.05
+
+```{r, echo=FALSE}
+shapiro.test(bikes$windspeed)
+```
+
++ En este caso se rechaza la hipotesis nula por lo tanto no existe normalidad en la variable Windspeed, ya que el p-value es menor a niveles de significancia. 
+
+
+
+## *Variable registered*
+
+```{r, echo=FALSE}
+Registrado <-bikes %>%
+  summarise(
+    media = mean(registered),
+    mediana = median(registered),
+    media_winsorizada = mean(registered, trim = 0.1),
+    desviacion_tipica = sd(registered),
+    varianza = var(registered),
+    IQR = IQR(registered),
+    maximo = max(registered),
+    minimo = min(registered),
+    Q1=quantile(registered,0.25),
+    Q3=quantile(registered,0.75))
+
+print(Registrado)
+
+```
+
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  registered), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = Registrado %>%
+      select(media, mediana, media_winsorizada, maximo, minimo,Q1,Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+
+```
+
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = registered), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour= "blue") +
+  geom_boxplot(aes(y = registered),width = .1, color = "blue") +
+  gghalves::geom_half_point(aes(y = registered), side = "l", range_scale = 0.6, alpha = 0.5, color = "blue") +
+  theme_light()
+
+```
+
++ En este grafico podemos observar la hay dispersion en los datos, por la separacion de los puntos en el grafico de dispersion y la amplitud de la caja del boxplot. 
+
++ Siendo su desviacion tipica de 1560.256, podemos decir que el valor de la variable windspeed puede variar 1560 respecto a la media. 
+
++ Siendo la media 3656.172, la mediana 3662, podemos decir que la distribución es asimetrica positiva.
+
++ No se encuentran valores outliers en esta variable.
+
+
+
+## *Variable casual*
+
+```{r, echo=FALSE}
+Casuales <-bikes %>%
+  summarise(
+    media = mean(casual),
+    mediana = median(casual),
+    media_winsorizada = mean(casual, trim = 0.1),
+    desviacion_tipica = sd(casual),
+    varianza = var(casual),
+    IQR = IQR(casual),
+    maximo = max(casual),
+    minimo = min(casual),,
+    Q1=quantile(casual,0.25),
+    Q3=quantile(casual,0.75))
+
+print(Casuales)
+
+```
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  geom_histogram(aes(x =  casual), bins = 30) +
+  theme_light() +
+  geom_vline(
+    data = Casuales %>%
+      select(media, mediana, media_winsorizada, maximo, minimo,Q1,Q3) %>%
+      pivot_longer(everything(), names_to = "Estadísticos de localización"),
+    aes(xintercept = value, col = `Estadísticos de localización`), size = 1.5
+  )
+
+```
+
+**Grafico Combinado**
+
+```{r, echo=FALSE}
+bikes %>%
+  ggplot() +
+  ggdist::stat_halfeye(aes(y = casual), adjust = .5, width = .3, .width = 0, justification = -.3, slab_colour= "orange") +
+  geom_boxplot(aes(y = casual),width = .1, color = "orange") +
+  gghalves::geom_half_point(aes(y = casual), side = "l", range_scale = 0.6, alpha = 0.5, color = "orange") +
+  theme_light()
+
+```
+
+**Deteccion de los outliers del grafico**
+
+```{r, echo=FALSE}
+boxplot.stats(bikes$casual)
+```
+
++ Siendo su media 848.1765 mayor que su mediana 713, podemos confirmar que su distribucion es asimetica positiva. 
+
++ Se puede evidenciar que la variable casual no se distribuye normalmente porque los datos estan concentrados hacia el lado derecho de la grafica.
+
++ Se muestra como outliers los valores superiores a 2.282 en  usuarios no registrados (Casuales).
+
++ La mayoria de los datos estan concentrados en el tramo inferior de 1000 usuarios.
+
+
+*****
+# Variables Categoricas
+*****
+
+Se realizan transformaciones en las variables categoricas cambiandolas a factor:
+
+ + Season
+ 
+ + Year
+ 
+ + Weathersit
+ 
+ + Workingday
+ 
+ + Holiday
+ 
+ + Weekday
+ 
+ + Month
+
+
+```{r, include=FALSE}
+#variables season 
+bikes$season <- factor(format(bikes$season),
+                          levels = c("1","2","3","4") , labels = c("Spring","Summer","Fall","Winter"))
+table(bikes$season)
+
+#Variable year
+bikes$yr <- factor(format(bikes$yr),
+                      levels = c("0", "1") , labels = c("2011","2012"))
+table(bikes$yr)
+
+#Variable Viento
+bikes$weathersit <- factor(format(bikes$weathersit),
+                              levels = c("1", "2","3","4") , 
+                              labels = c("Good","Moderate","Bad","Worse"))
+table(bikes$weathersit)
+
+#Variable workingday
+bikes$workingday <- factor(format(bikes$workingday),
+                        levels = c("0", "1") , labels = c("Holiday","Working Day"))
+table(bikes$workingday)
+
+#Variable holiday
+bikes$holiday <- factor(format(bikes$holiday),
+                           levels = c("0", "1") , labels = c("Working Day","Holiday"))
+table(bikes$holiday)
+
+#Variable weekday
+bikes$weekday <- factor(format(bikes$weekday),
+                        levels = c("0", "1", "2", "3", "4","5","6") , 
+                        labels = c("Dom","Lun", "Mar", "Mie", "Jue","Vie", "Sab"))
+table(bikes$weekday)
+
+#Variable month
+bikes$mnth <-str_trim(bikes$mnth)
+bikes$mnth <-as.factor(bikes$mnth)
+levels(bikes$mnth)
+bikes$mnth <- factor(bikes$mnth,
+                     levels = c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"), 
+                     labels = c("Ene","Feb", "Mar", "Abr", "May","Jun","Jul","Ago","Sep","Oct","Nov", "Dic"))
+#Variable dteday
+as.Date(bikes$dteday)
+
+```
+
+
+Se comprueba nuevamente el DataFrame, las variables categoricas cambian a tipo de dato "Factor"
+
+```{r}
+str(bikes)
+```
+
+## Gráficos de barras para visualizar niveles de las categorías.
+
+Gráficos de barras para visualizar que niveles hay más en cada una de las categorías. 
+
+
+```{r}
+bikes %>% ggplot(aes(workingday, fill = workingday)) + geom_bar()
+bikes %>% ggplot(aes(yr, fill = yr)) + geom_bar()
+bikes %>% ggplot(aes(season, fill = season)) + geom_bar()
+bikes %>% ggplot(aes(holiday, fill = holiday)) + geom_bar()
+bikes %>% ggplot(aes(weathersit, fill = weathersit)) + geom_bar()
+bikes %>% ggplot(aes(mnth, fill =mnth)) + geom_bar()
+bikes %>% ggplot(aes(weekday, fill= weekday)) + geom_bar()
+```
+
+**¿Porque no son interesantes la mayoría de estos gráficos?**
+
++ La mayoria de los graficos no son interesantes porque se observan solo los niveles de cada variable categorica, donde lo interesante seria cruzarla con otra variable. 
+
+
+
+## Scatterplot de la variable count
+
+
+```{r, echo=FALSE}
+bikes %>%   
+  select_if(is.numeric) %>% 
+  pivot_longer(-cnt, names_to = "variable", values_to = "valor") %>%
+  ggplot() + 
+  geom_point(aes(y = cnt, x = valor)) + 
+  facet_wrap(~ variable, scales = "free_x")
+```
+
+## Realizar un scatterplot de cada variable contra count. ¿Que observas? 
+
++ Al aumentar los usuarios registrados aumentan los alquileres de las bicicletas
++ Cuando Windspeed se incrementa, vemos que disminuye levemente la cantidad de alquileres, ya que observamos una pequeña pendiente negatia
++ Cuando la temperatura y atemp, pareciera que existieran dos grupos de preferencias en el alquiler de bicicletas con temperaturas superiores e inferiores a la media.
++ Parece un comportamiento logaritmico por lo que podemos decir que los usuarios casuales aumentan hasta cierto punto con una concentracion superior que luego disminuye.
+
+
+## ¿Crees probable alguna interacción en base a los gráficos?
+
++ Las variables Casual y Registered pueden tener alguna relacion  ya que visualmente con respecto al alquiler de bicicletas tiene una tendencia creciente
++ Las variables temp y atemp pueden tener una relacion al tener un comportamiento o una forma muy similar.
+
+
+## Métodos de correlación 
+
+**Utiliza distintos metodos de correlacion y razona sobre los resultados.**
+
+
+### Correlación de Pearson
+
+```{r, echo=FALSE}
+pearson = bikes %>%
+  select_if(is.numeric) %>%
+  cor(method = "pearson") %>%
+  round(2) %>%
+  ggcorrplot::ggcorrplot(hc.order = TRUE, 
+                         lab = TRUE)
+print(pearson)
+```
+
+### Correlación de Spearman
+
+```{r, echo=FALSE}
+spearman = bikes %>%
+           select_if(is.numeric) %>%
+           cor(method = "spearman") %>%
+           round(2) %>%
+           ggcorrplot::ggcorrplot(hc.order = TRUE, 
+                                   lab = TRUE)
+print(spearman)
+```
+
+### Correlación de Kendall
+
+```{r, echo=FALSE}
+kendall = bikes %>%
+  select_if(is.numeric) %>%
+  cor(method = "kendall") %>%
+  round(2) %>%
+  ggcorrplot::ggcorrplot(hc.order = TRUE, 
+                         lab = TRUE)
+
+print(kendall)
+```
+
+ **PEARSON**
+
+- Se utilizan para evaluar la relacion lineal entre dos variables continuas. Es un metodo sensible a los outliers. Las condiciones para utilizar este estimador son que los datos o variables aleatorias sean continuas y medirá bien la relación cuando los datos tengan una relación lineal. Por tanto, este coeficiente nos ayduará a detectar relaciones lineales o aproximadamente lineales.
+
+- Vemos que la relación no es lineal, pero con algunas variables tiene algún tipo de aproximación lineal ya que  marca algo de correlación.
+
+- Tambien vemos que algunas variables no tienen un desarrollo lineal porque da una correlación muy cercana a 0.
+
+
+ **Spearman y Kendall**
+ 
+ Kendall y Spearmen se utilizan para datos no parametricos, cuando la distribucion de los datos es desconocida o no satisface la condicion de normalidad.
+
++ Spearman se utiliza para evaluar la relacion monotona entre dos variables continuas u ordinales, es decir, que las variables tiendan a cambiar al mismo tiempo aunque no necesariamente  a un ritmo constante. Se observa el ajuste de la correlacion con respecto a pearson, una vez los datos son ordenados y reemplazados por su respectivo orden.
+
++ Kendall utiliza tambien la ordenación de los datos. Es recomendable cuando se dispone de pocos datos y muchos de ellos ocupan la misma posición en el rango, es decir, cuando hay muchas ligaduras.
+
+
+Analizamos la correlación de las variables de estudio:
+
+
++ Existe una alta correlacion positiva  entre la cantidad de bicicletas alquilada (cnt) y los usuarios registrados (registred)
+
++ Existe una correlacion media entre cantidad de bicicletas alquilas y los usuarios casuales
+
++ Existe una correlacion negativa entre la cantidad de biciletas alquiladas y la velocidad del viento. 
+
++ Existe una alta correlación positiva entre la temperatura(temp) y la sensación térmica(atemp)
+
++ Existe una correlacion negativa entre la humedad y la velocidad del viento.  
+
+
+
+Del análisis se pueden extraer las siguientes conclusiones:
+
+Las variables que tienen una mayor relación lineal con el alquiler de bicicletas son: Registered, Casual, Temp y Atemp. Y, Las variables que estan medianamente correlacionadas son Hum y Windspeed.
+
+
+## Relaciones temporales
+
+### Las bicis se alquilan más los fines de semana o entre semana
+
+```{r}
+  bikes %>%
+    ggplot() + 
+    geom_boxplot(aes(x = workingday, y = cnt, fill = workingday))  
+```
+
++ En ambos boxplot se muestra la mediana muy similar
++ El 50% de los datos (la caja del boxplot) en Workingday es mas elevado con respecto al 50% de los datos(la caja del boxplot) en holiday
++ Entre la mediana y el Q1 se encuentran mas observaciones que entre la mediana y el Q3 en Holiday
++ Los valores superiores de alquiler se encuentran en Holiday
++ Los valores inferiores de alquiler se encuentran en workingday
++ La caja de holiday es mas grande porque tiene concentrada la mayor cantidad de datos dentro del 50% 
+
+
+
+**¿Hay diferencia estadística con un α=0.05 para asegurar que hay menos alquileres en fin de semana que entre semana?**
+
+**Hipotesis nula: $H_{0}:$ **  Promedio de alquileres de bicis fines de semana es mayor o igual que entre semana 
+
+**Hipotesis alternativa: $H_{1}:\neq$ ** Promedio de alquileres de bicis fines de semana es menor que entre semana
+
+Se añade la variable **weekend** donde se utiliza un condicional de la variable weekday para saber si es fin de semana (Sabado o Domingo), ya que en la variable workingday existen algunos lunes como festivos. 
+
+ -  "SI" si es sabado o domingo 
+ -  "No" si es un dia entre lunes y viernes.
+ 
+```{r}
+bikes$weekend <- ifelse(bikes$weekday == "Dom" | bikes$weekday == "Sab", "Si","No") 
+```
+
+
+```{r}
+t.test(bikes$cnt[bikes$weekend == "Si"],
+       bikes$cnt[bikes$weekend == "No"],
+       alternative = "less")
+```
+
++ El p-value es mayor al nivel de significacia (α=0.05), porlo que no se rechaza la hipotesis nula por lo tanto no se prueba que los alquileres de bicis los fines de semana son menor que entre semana, afirmacion que se realiza con un nivel de confianza del 95%.
+
+
+```{r}
+  bikes %>%
+    ggplot() + 
+    geom_boxplot(aes(x = workingday, y = cnt, fill = workingday))  
+
+```
+
+### Dias de la semana que mas bicis se alquilan 
+
+```{r}
+  bikes %>%
+    ggplot() + 
+    geom_boxplot(aes(x = weekday, y = cnt, fill = weekday))  
+
+```
+
++ Podemos observar que el Sabado es el dia donde mas se han alquilado bicis
++ La mediana mas alta es los jueves
++ Los valores mas alto de alquileres se encuentran los dias Sabados
++ Los valores mas bajos de alquileres son los dias Lunes
++ La caja mas grande es el Miercoles porque este dia la concentracion de los datos es mayor dentro del 50% de los datos
+
+
+
+###  Temporada donde se alquilan mas bicis
+
+```{r}
+  bikes %>%
+    ggplot() + 
+    geom_boxplot(aes(x = season, y = cnt, fill = season))
+```
+
++ Podemos observar que en la  temporada en otoño se encunetra el valor de alquiler de bicis mas alto.
+
++ Podemos observar que en la temporada de primavera se encuentra un valor oulier superior que indica que no es normal que alquilen esa cantidad de 7836 bicis en primavera, siendo normal para el resto de temporadas ya que sus bigotes llegan a esa altura aproximada.
+
++ Se muestra un outlier negativo en la temporada de invierno donde se realizaron solo 22 alquileres de bicis, ademas al analizar el dataframe vemos que era un dia lunes laborable y el tiempo era considerado malo.
+
++ Podemos añadir que las distribuciones de las cajas son asimetricas, y la mas cerca de parecerse a una normal es "winter"
+
++ La mediana de las temporadas Spring, Summer y Fall, se encuntran desplazadas hacia abajo, lo que indica que el 50% de los datos dentro de la caja estan concentrados por encima de la mediana, mientras que en  Winter apreciamos un ligero desplazamiento hacia arriba, lo que indica lo contrario, es decir, el 50% de los datos se concentra por debajo de la mediana. 
+
+
+
+## Interacciones
+
+**Interacciones:** *tanto en la relación con registered como con temp hay una interacción clara. Encuentra estas variables y representalo de un modo visual.*
+
+Regresión con modelo lineal, con la variable “Cnt” como dependiente y "Registered" y "temp" como explicativas:
+
+```{r}
+model <- lm(cnt ~ registered + temp, data = bikes)
+summary(model)
+```
+
+Como encontramos que las gráficas de correlación contra el alquiler de bicicletas con la temperatura y los usuarios registrados estaban  relacionadas, creamos un modelo lineal y encontramos lo siguiente:
+
++ El modelo con estas variables introducidas como predictores es capaz de explicar el 91.33% de la variabilidad observada en el alquiler de las bicicletas(R-squared: 0.9133).
+
++ Podemos decir que ambas variables son significativas, ya que su nivel de significancia es muy cercano al 0 *** y con p-value muy bajo. Ademas, el modelo se considera significativo ya que el test F muestra un p-value de 2.2e-16.
+
++ Los usuarios registrados en media alquilan 1.0633 bicis.
+
++ La temperatura influye en la media del aquileres de bicicleta en un 1746.47 
+
+Sin embargo, al verificar el gráfico de residuos y el gráfico de QQ, podemos ver que los residuos tienen un patrón y no están distribuidos normalmente, lo que significa que el modelo lineal no se ajusta tan bien a los datos.
+
+**Grafico**  
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model)
+```
+
+
++ Como ya hemos indicado, la condición de normalidad no se satisface,  se muestra al final de la grafica (Normal Q-Q) unos puntos por encima de la recta de regresión.
+
++ Si se observa algún patrón de forma cónica o mayor dispersión en los extremos, lo que significa que la variabilidad es dependiente del valor ajustado y por lo tanto no hay homocedasticidad.
+
++ Hay un dato que influye sobre el modelo 
+
+## Habitos de consumo con respecto al año anterior
+
+**¿Ha cambiado el hábito de consumo de los clientes de un año a otro en cuanto a coger la bici los fines de semana?**
+
+```{r}
+  bikes %>%
+    ggplot() + 
+    geom_boxplot(aes(x = yr, y = cnt, fill = weekend))
+```
+
+
+**NOTA:** *Recordemos que creamos la variable weekend con valor "Si" para fines de semana y "No" para dias de la semana entre lunes y viernes*
+
+Podemos observar que el habito de alquiler de los clientes de un año con respecto al otro cambia, ya que se evidencia lo siguiente:
+
++ Un incremento de los valores mayores de alquileres de bicis tanto en fines de semana como entre semana, es decir el valor de los bigotes es superior con respecto a 2011.
+
++ Podemos observar que las cajas se desplazan  hacia arriba, lo que indica que el 50% de los datos tienen un valor mayor en alquileres con respecto al año anterior.
+
++ Al desplazarse la caja, vemos que tambien se desplaza la mediana, la cual en ambos casos se encuentra desplazada hacia la parte superior de la caja, lo que indica que dentro del 50% de los datos, la mayoria esta concentrada debajo de la media. 
+
+
+# Problema de Probabilidad
+
+Dos equipos jugarán un partido al mejor de 7 (el partido terminará tan pronto como cualquiera de los equipos haya ganado 4 juegos). Cada juego termina con una victoria para un equipo y una derrota para el otro equipo.
+
+Suponga que cada equipo tiene la misma probabilidad de ganar cada juego y que los juegos que se juegan son independientes.
+
+Encuentre la media y la varianza del número de juegos jugados.
+
+### Funcion para el experimento
+
+```{r}
+partido2<- function(){
+    gana_teamA = c()
+    juego=0
+    rondas = 0
+    while (juego < 4) {
+      nuevo_juego = sample(0:1, 1)
+      gana_teamA = c(gana_teamA , nuevo_juego)
+      juegoA = sum(gana_teamA)
+      juegoB = length(gana_teamA[gana_teamA==0])
+      juego=max(juegoA,juegoB)
+      rondas = rondas + 1
+    } 
+ #   return( list(juegoA,juegoB,rondas) )
+    return( rondas )
+  }
+  
+partido2()
+```
+
+
+### Repetimos muchas veces el experimento.
+
+```{r}
+set.seed(1234)
+  numero_partidos = replicate(100000, partido2())
+```
+
+Media de numero de partidos
+
+```{r}
+    media = mean(numero_partidos)
+    print(media)
+```
+
+Varianza de numero de partidos
+
+```{r}
+varianza = var(numero_partidos)
+print(varianza)
+```
+Desviacion Tipica
+```{r}
+desviacion_tipica = sd(numero_partidos)
+print(desviacion_tipica)
+```
+
+### Boxplot del numero de partidos
+
+```{r}
+boxplot(numero_partidos, col = "pink")
+```
+
+
+```{r}
+quantile(numero_partidos, prob=c(0,0.25,0.5,0.75,1))
+```
+
+Maximo de numero de partidos
+
+```{r}
+  max(numero_partidos)
+```
+###  Histograma del numero de partidos
+
+```{r}
+hist(numero_partidos, col = "pink")
+```
+
+Del resultado anterior podemos deducir:
+
++ Que el maximo de partidos a jugar es 7, lo que quiere decir que hay un 100% de probabilidad de que alguno de los dos equipos ya haya ganado 4 partidos
++ Que el minimo de partidos a jugar es de 4, hay una probabilidad de 0% de que al jugar 4 ya haya un ganador de los 4 partidos
++ Que la mediana de partidos a jugar es de 6, esto quiere decir que al menos jugando 6 partidos tenemos un 50% de probabilidades de que alguno de los dos equipos haya ganado 4 partidos.
++ Que la desviacion tipica es de 1.015259, por lo que podria variar en 1.015259 partido con respecto al valor de la media 5.80874.
+
