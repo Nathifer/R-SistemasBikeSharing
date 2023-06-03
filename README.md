@@ -27,7 +27,7 @@ Recuerda que el **objetivo del negocio es aumentar sus ingresos** así que querr
  - Scatterplot de cada variable contra count.
  - ¿Se cree probable alguna interacción en base a los gráficos?
  - Distintos métodos de correlación y sus resultados.
- - 
+  
  **Relaciones temporales:**
 En datos temporales, normalmente podemos encontrar tendencias; según pasa el tiempo, aumenta o disminuyen los alquileres y también estacionalidades; las personas pueden coger más la bici los fines de semana que entre semana, por día de la semana… Estudia estas relaciones con un gráfico de cajas (como si fuera categórica). ¿Encuentras tendencias o estacionalidad en los datos? ¿Hay diferencia estadística con un α=0.05α=0.05 para asegurar que hay menos alquileres en fin de semana que entre semana?
  **Interacciones:** tanto en la relación con registered como con temp hay una interacción clara. Encuentra estas variables y representalo de un modo visual.
