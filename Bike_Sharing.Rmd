@@ -34,7 +34,7 @@ El conjunto de datos bikes.csv  contiene informacion sobre el alquiler y devoluc
 Lectura del fichero de datos **"bikes.csv"** se guardan los datos en un objeto con identificador denominado **bikes**
 
 ```{r}
-setwd("C:/Users/natha/OneDrive/Desktop/MASTER - DS/2. TECNICAS DE ANALISIS ESTADISTICO/Data")
+setwd("C:/Users/2. TECNICAS DE ANALISIS ESTADISTICO/Data")
 bikes<- read.csv("bikes.csv", header=TRUE, sep=",", dec=".", fileEncoding = "UTF-8")
 ```
 
