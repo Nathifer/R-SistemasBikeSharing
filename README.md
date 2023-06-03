@@ -39,7 +39,7 @@ Hallar probabilidades con experimentos:
  - 	Creamos una función para un experimento
  - 	Lo repetimos muchas veces
  -  Hallamos la probabilidad
- -  
+ 
 **Problema**
 Dos equipos jugarán un partido al mejor de 7 (el partido terminará tan pronto como cualquiera de los equipos haya ganado 4 juegos). Cada juego termina con una victoria para un equipo y una derrota para el otro equipo.
 Suponga que cada equipo tiene la misma probabilidad de ganar cada juego y que los juegos que se juegan son independientes.
